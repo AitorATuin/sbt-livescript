@@ -1,0 +1,8 @@
+project/
+target/
+
+# sublime-text
+*.sublime-*
+node_modules/*
+.idea*
+.idea_modules*
