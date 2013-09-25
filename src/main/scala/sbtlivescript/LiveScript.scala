@@ -29,7 +29,7 @@ sealed trait LiveScript extends NpmPackageBase {
 
   def compile(inFile: File)(outFile:File) = compiler.
     map(_ + "-c" + "-p" + inFile.toString).
-      some (c => {println(c);c.??!!.map(o => (outFile,IO.write(outFile, o))._1)}).
+      some (c => c.??!!.map(o => (outFile,IO.write(outFile, o))._1)).
       none {s"Error when compiling livescript file `${inFile.toString}`".failNel
   }
 }

@@ -25,6 +25,9 @@ object SbtLiveScriptPlugin extends Plugin {
   import LiveScriptKeys._
   import Implicits._
 
+  private def getParent(file: File): String = Option(file.getParent).getOrElse("")
+  private def getParent(s: String): String = getParent(file(s))
+
   object LiveScriptKeys {
     val livescript = Def.taskKey[ValidationNel[String,List[File]]]("Compiles livescript files")
     val outputDirectory = Def.settingKey[File]("Destination directory where to put compiled files")
@@ -63,10 +66,16 @@ object SbtLiveScriptPlugin extends Plugin {
     val log = streams.value.log
     val lsOutputDir: File = (outputDirectory in livescript).value
     log.info("Cleaning livescript compiled files")
-    (lsOutputDir ** "*_ls.js").get foreach { IO.delete(_) }
-
+    (lsOutputDir ** "*.ls").get map {
+      f => (f, file(getParent(f)) / (f.base + ".js"))
+    } foreach {fp => IO.delete(fp._1 :: fp._2 :: Nil)}
   }
 
+  /*
+   * For each compiled file there should be a file with extension .ls. Example:
+   *    sourceDir/output.js
+   *    sourceDir/output.ls <- original file from where the js file was compiled.
+   */
   lazy val compileTaskImpl : Def.Initialize[Task[ValidationNel[String, List[File]]]] = Def.task {
     val log = streams.value.log
     val lscript: ValidationNel[String, LiveScript] = (liveScriptPackage in livescript).value
@@ -77,14 +86,19 @@ object SbtLiveScriptPlugin extends Plugin {
     val outputFileName = (inputFile:File) => for {
       outFileName <- inputFile.relativeTo(lsSourceDir).toSuccess("relativeTo error.".wrapNel)
       outBaseName <- Option(outFileName.getParent).getOrElse("").successNel[String]
-    } yield lsOutputDir / outBaseName / (inputFile.base + "_ls.js")
+    } yield {
+      val f = lsOutputDir / outBaseName
+      ((f / inputFile.name) -> (f / (inputFile.base + ".js")))
+    }
 
     val files = (for {
       inputFile <- (lsSourceDir ** "*.ls").get
     } yield for {
-      outputFile <- outputFileName(inputFile)
+      files <- outputFileName(inputFile)
+      (touchFile, outputFile) = files
       ls <- lscript
       writtenFile <- ls.compile(inputFile)(outputFile)
+      _ = IO.touch(touchFile)
     } yield writtenFile).toList.sequenceU
 
     files.foreach (xs => CleanTask ++ xs)
