@@ -13,11 +13,13 @@ import com.logikujo.sbt._
 import npm._
 import scalaz._
 import scalaz.syntax.nel._
+import scalaz.syntax.monoid._
 import scalaz.syntax.validation._
 import scalaz.syntax.applicative._
 import scalaz.syntax.std.option._
 import scalaz.syntax.traverse._
 import scalaz.std.list._
+import scalaz.std.string._
 import net.liftweb.json._
 
 object SbtLiveScriptPlugin extends Plugin {
@@ -91,7 +93,15 @@ object SbtLiveScriptPlugin extends Plugin {
       ((f / inputFile.name) -> (f / (inputFile.base + ".js")))
     }
 
-    val files = (for {
+    val outputFiles = (inputFile: File) => for {
+      outFileName <- inputFile.relativeTo(lsSourceDir)
+      outBaseName <- Option(getParent(outFileName))
+      jsFile = lsOutputDir / outBaseName / (inputFile.base + ".js")
+      touchFile = lsOutputDir / outBaseName / inputFile.name
+      if inputFile newerThan jsFile
+    } yield (touchFile -> jsFile)
+
+    (for {
       inputFile <- (lsSourceDir ** "*.ls").get
     } yield for {
       files <- outputFileName(inputFile)
@@ -100,9 +110,6 @@ object SbtLiveScriptPlugin extends Plugin {
       writtenFile <- ls.compile(inputFile)(outputFile)
       _ = IO.touch(touchFile)
     } yield writtenFile).toList.sequenceU
-
-    files.foreach (xs => CleanTask ++ xs)
-    files
   }
 }
 
