@@ -35,23 +35,29 @@ object SbtLiveScriptPlugin extends Plugin {
     val outputDirectory = Def.settingKey[File]("Destination directory where to put compiled files")
     val liveScriptPackage = Def.settingKey[ValidationNel[String,LiveScript]]("Package to use to compile livescript files")
     val npmProgram = Def.settingKey[ValidationNel[String,Npm]]("npm executable program")
+    val watchedFiles = Def.taskKey[Seq[File]]("Files to watch")
   }
 
   def liveScriptSettingsIn(conf: Configuration): Seq[Setting[_]] = inConfig(conf)(
-    Seq(
-      (sourceDirectory in livescript) := (sourceDirectory in conf).value / "livescript",
-      (resourceManaged in livescript) := (resourceManaged in conf).value
-    ) ++
     Seq(
       (outputDirectory in livescript) := (resourceManaged in livescript).value / "livescript",
       (liveScriptPackage in livescript) := (npmProgram in livescript).value.flatMap {
         (n: Npm) => n.getPackage[LiveScript]
       },
       (npmProgram in livescript) := Npm.get("npm"),
-      //(init in livescript) := initTaskImpl.value,
       (clean in livescript) := cleanTaskImpl.value,
-      (livescript in livescript) := compileTaskImpl.value
+      (livescript in livescript) := compileTaskImpl.value,
+      (unmanagedSources in livescript) := liveScriptSourcesImpl.value
+      //(watchSources in livescript) <<= (unmanagedSources in livescript)
+    ) ++
+    Seq(
+      (sourceDirectory in livescript) := (sourceDirectory in conf).value / "livescript",
+      (resourceManaged in livescript) := (resourceManaged in conf).value,
+      (compile in conf) <<= (compile in conf) dependsOn (livescript in livescript),
+      (clean in conf) <<= (clean in conf) dependsOn (clean in livescript)
     )
+  ) ++ Seq(
+    watchSources ++= (unmanagedSources in livescript in conf).value
   )
 
   val liveScriptSettings: Seq[Setting[_]] = liveScriptSettingsIn(Compile) ++ liveScriptSettingsIn(Test)
@@ -70,7 +76,12 @@ object SbtLiveScriptPlugin extends Plugin {
     log.info("Cleaning livescript compiled files")
     (lsOutputDir ** "*.ls").get map {
       f => (f, file(getParent(f)) / (f.base + ".js"))
-    } foreach {fp => IO.delete(fp._1 :: fp._2 :: Nil)}
+    } foreach {fp: (File,File) => IO.delete(fp._1 :: fp._2 :: Nil)}
+  }
+
+  lazy val liveScriptSourcesImpl = Def.task {
+    val lsSourceDir: File = (sourceDirectory in livescript).value
+    (lsSourceDir ** "*.ls").get
   }
 
   /*
