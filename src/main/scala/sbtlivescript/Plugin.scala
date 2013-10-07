@@ -48,7 +48,6 @@ object SbtLiveScriptPlugin extends Plugin {
       (clean in livescript) := cleanTaskImpl.value,
       (livescript in livescript) := compileTaskImpl.value,
       (unmanagedSources in livescript) := liveScriptSourcesImpl.value
-      //(watchSources in livescript) <<= (unmanagedSources in livescript)
     ) ++
     Seq(
       (sourceDirectory in livescript) := (sourceDirectory in conf).value / "livescript",
@@ -69,7 +68,6 @@ object SbtLiveScriptPlugin extends Plugin {
     def clean: Unit = files.values.foreach { IO.delete(_)}
   }
 
-  // TODO: Add timestamp to extension: ls_{timestamp}.js to avoid conflicts on removing files
   lazy val cleanTaskImpl = Def.task {
     val log = streams.value.log
     val lsOutputDir: File = (outputDirectory in livescript).value
