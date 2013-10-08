@@ -31,7 +31,7 @@ object SbtLiveScriptPlugin extends Plugin {
   private def getParent(s: String): String = getParent(file(s))
 
   object LiveScriptKeys {
-    val livescript = Def.taskKey[ValidationNel[String,List[File]]]("Compiles livescript files")
+    val livescript = Def.taskKey[Seq[File]]("Compiles livescript files")
     val outputDirectory = Def.settingKey[File]("Destination directory where to put compiled files")
     val liveScriptPackage = Def.settingKey[ValidationNel[String,LiveScript]]("Package to use to compile livescript files")
     val npmProgram = Def.settingKey[ValidationNel[String,Npm]]("npm executable program")
@@ -47,6 +47,7 @@ object SbtLiveScriptPlugin extends Plugin {
       (npmProgram in livescript) := Npm.get("npm"),
       (clean in livescript) := cleanTaskImpl.value,
       (livescript in livescript) := compileTaskImpl.value,
+      livescript := (livescript in livescript).value,
       (unmanagedSources in livescript) := liveScriptSourcesImpl.value
     ) ++
     Seq(
@@ -65,7 +66,7 @@ object SbtLiveScriptPlugin extends Plugin {
     private val files: MMap[String, File] = MMap.empty
     def ++(xs:List[File]) = xs.foreach {f => files += (f.toString -> f)}
     def --(xs:List[File]) = xs.foreach {f => files -= f.toString }
-    def clean: Unit = files.values.foreach { IO.delete(_)}
+    def clean = files.values.foreach { IO.delete}
   }
 
   lazy val cleanTaskImpl = Def.task {
@@ -87,7 +88,7 @@ object SbtLiveScriptPlugin extends Plugin {
    *    sourceDir/output.js
    *    sourceDir/output.ls <- original file from where the js file was compiled.
    */
-  lazy val compileTaskImpl : Def.Initialize[Task[ValidationNel[String, List[File]]]] = Def.task {
+  lazy val compileTaskImpl : Def.Initialize[Task[Seq[File]]] = Def.task {
     val log = streams.value.log
     val lscript: ValidationNel[String, LiveScript] = (liveScriptPackage in livescript).value
     val lsSourceDir: File = (sourceDirectory in livescript).value
@@ -99,16 +100,8 @@ object SbtLiveScriptPlugin extends Plugin {
       outBaseName <- Option(outFileName.getParent).getOrElse("").successNel[String]
     } yield {
       val f = lsOutputDir / outBaseName
-      ((f / inputFile.name) -> (f / (inputFile.base + ".js")))
+      (f / inputFile.name) -> (f / (inputFile.base + ".js"))
     }
-
-    val outputFiles = (inputFile: File) => for {
-      outFileName <- inputFile.relativeTo(lsSourceDir)
-      outBaseName <- Option(getParent(outFileName))
-      jsFile = lsOutputDir / outBaseName / (inputFile.base + ".js")
-      touchFile = lsOutputDir / outBaseName / inputFile.name
-      if inputFile newerThan jsFile
-    } yield (touchFile -> jsFile)
 
     (for {
       inputFile <- (lsSourceDir ** "*.ls").get
@@ -117,8 +110,15 @@ object SbtLiveScriptPlugin extends Plugin {
       (touchFile, outputFile) = files
       ls <- lscript
       writtenFile <- ls.compile(inputFile)(outputFile)
+      _ = log.info(s"Compiled $writtenFile")
       _ = IO.touch(touchFile)
-    } yield writtenFile).toList.sequenceU
+    } yield writtenFile).toList.sequenceU.fold(
+      (xs) => {
+        xs.foreach { log.error(_)}
+        sys.error("ERROR")
+      },
+      (xs) => xs
+    )
   }
 }
 
