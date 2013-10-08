@@ -1,0 +1,3 @@
+# check if the file gets created
+> livescript::livescript
+$ exists target/scala-2.10/foo.jar

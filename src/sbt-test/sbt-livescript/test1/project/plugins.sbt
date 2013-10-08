@@ -1,0 +1,1 @@
+addSbtPlugin("com.logikujo" % "sbt-livescript" % "0.1")
