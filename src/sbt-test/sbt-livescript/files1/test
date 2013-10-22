@@ -1,0 +1,4 @@
+# check if the file gets created
+> livescript::livescript
+# check that some files are compiled
+> checkFiles
