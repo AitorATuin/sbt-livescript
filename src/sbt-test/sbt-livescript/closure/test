@@ -1,4 +1,4 @@
 # check if the file gets created
-> livescript::livescript
-# check that some files are compiled
-> checkFiles 
+> closure
+# check that ls files are joined by closure compiler
+> checkClosureWithLS
