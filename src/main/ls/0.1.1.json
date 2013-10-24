@@ -1,0 +1,33 @@
+{
+  "organization" : "com.logikujo",
+  "name" : "sbt-livescript",
+  "version" : "0.1.1",
+  "description" : "sbt plugin to compile livescript files.",
+  "site" : "https://github.com/AitorATuin/sbt-livescript",
+  "tags" : [ "sbt", "web", "livescript", "javascript" ],
+  "docs" : "",
+  "resolvers" : [ "https://oss.sonatype.org/content/repositories/releases" ],
+  "dependencies" : [ {
+    "organization" : "net.liftweb",
+    "name" : "lift-json",
+    "version" : "2.5"
+  }, {
+    "organization" : "org.scalaz",
+    "name" : "scalaz-core_2.10",
+    "version" : "7.1.0-M2"
+  }, {
+    "organization" : "org.scala-sbt",
+    "name" : "scripted-sbt",
+    "version" : "0.13.0"
+  }, {
+    "organization" : "org.scala-sbt",
+    "name" : "sbt-launch",
+    "version" : "0.13.0"
+  } ],
+  "scalas" : [ "2.10.2" ],
+  "licenses" : [ {
+    "name" : "Apache License 2.0",
+    "url" : "https://github.com/eltimn/sbt-closure/raw/master/LICENSE"
+  } ],
+  "sbt" : true
+}
