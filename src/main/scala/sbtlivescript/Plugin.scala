@@ -44,7 +44,7 @@ object SbtLiveScriptPlugin extends Plugin {
       (liveScriptPackage in livescript) := (npmProgram in livescript).value.flatMap {
         (n: Npm) => n.getPackage[LiveScript]
       },
-      (npmProgram in livescript) := Npm.get("npm"),
+      (npmProgram in livescript) := Npm.get("npm", "npm --version"),
       (clean in livescript) := cleanTaskImpl.value,
       (livescript in livescript) := compileTaskImpl.value,
       livescript := (livescript in livescript).value,

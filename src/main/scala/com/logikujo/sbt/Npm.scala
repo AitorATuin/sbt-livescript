@@ -97,7 +97,8 @@ object Npm {
   def apply(s: String): Npm = new Npm {
     val npm: List[String] => ProcessBuilder = args => Process(Seq(s) ++ args)
   }
-  def get(s: String) = s.??!!.map(_ => apply(s))
+  def get(cmd: String):ValidationNel[String, Npm] = get(cmd, cmd)
+  def get(cmd: String, testCmd: String): ValidationNel[String, Npm] = testCmd.??!!.map(_ => apply(cmd))
   //existsCommand(s).map(_ => apply(s))
 }
 
